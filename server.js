@@ -658,7 +658,7 @@ app.post('/api/login', async (req, res) => {
 // الحصول على جميع المنتجات
 app.get('/api/products', async (req, res) => {
     try {
-        const products = await runExecQuery(db, 'SELECT * FROM products ORDER BY created_at DESC');
+        const products = await runQuery(db, 'SELECT * FROM products ORDER BY created_at DESC');
         res.json(products);
     } catch (error) {
         console.error('خطأ في جلب المنتجات:', error);
