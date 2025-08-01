@@ -120,6 +120,15 @@ async function sendOrderEmail(orderData) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// منع التخزين المؤقت
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+});
+
 app.use(express.static('public'));
 
 // إنشاء قاعدة البيانات

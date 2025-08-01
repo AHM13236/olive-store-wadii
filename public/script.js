@@ -7,6 +7,10 @@ let isAuthMode = 'login'; // 'login' أو 'register'
 // API Base URL
 const API_BASE = window.location.origin;
 
+// تشخيص URL الأساسي
+console.log('API_BASE:', API_BASE);
+console.log('Current location:', window.location.href);
+
 // ===== تهيئة التطبيق =====
 document.addEventListener('DOMContentLoaded', function() {
     loadProducts();
@@ -646,6 +650,8 @@ async function handleLogin(e) {
     
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
+
+    console.log('محاولة تسجيل الدخول إلى:', `${API_BASE}/api/login`);
 
     try {
         const response = await fetch(`${API_BASE}/api/login`, {
