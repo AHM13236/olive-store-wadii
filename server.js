@@ -265,10 +265,16 @@ function initializeDatabase() {
         else console.log('تم إنشاء جدول المراجعات');
     });
 
-    // حذف جميع المنتجات الموجودة
-    db.run('DELETE FROM products', (err) => {
-        if (err) console.error('خطأ في حذف المنتجات:', err);
-        else console.log('تم حذف جميع المنتجات الموجودة');
+    // التحقق من وجود المنتجات وإضافتها إذا لم تكن موجودة
+    db.get('SELECT COUNT(*) as count FROM products', (err, result) => {
+        if (err) {
+            console.error('خطأ في التحقق من المنتجات:', err);
+        } else if (result.count === 0) {
+            console.log('لا توجد منتجات، سيتم إضافة المنتجات الافتراضية...');
+            insertNewProducts();
+        } else {
+            console.log(`يوجد ${result.count} منتج في قاعدة البيانات`);
+        }
     });
 }
 
@@ -557,8 +563,7 @@ function insertNewProducts() {
     });
 }
 
-// استدعاء دالة إضافة المنتجات مرة واحدة فقط عند بدء الخادم
-insertNewProducts();
+// دالة إضافة المنتجات سيتم استدعاؤها من initializeDatabase() إذا لم تكن المنتجات موجودة
 
 // Middleware للتحقق من الرمز المميز
 function authenticateToken(req, res, next) {

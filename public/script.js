@@ -5,7 +5,7 @@ let products = [];
 let isAuthMode = 'login'; // 'login' أو 'register'
 
 // API Base URL
-const API_BASE = '';
+const API_BASE = window.location.origin;
 
 // تحميل البيانات عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {

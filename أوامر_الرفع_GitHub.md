@@ -46,7 +46,7 @@ git push -u origin main
 ✅ مجلد public/ (اسحب المجلد كاملاً)
 ✅ دليل_GitHub_Vercel.md
 ✅ خطوات_سريعة_Vercel.md
-✅ GitHub_كاستضافة.md
+✅ أوامر_الرفع_GitHub.md
 ```
 
 #### **الخطوة 3: إتمام الرفع**
