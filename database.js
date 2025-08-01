@@ -3,14 +3,18 @@ const { Pool } = require('pg');
 
 // إعداد قاعدة البيانات حسب البيئة
 function createDatabase() {
-    if (process.env.NODE_ENV === 'production' && process.env.POSTGRES_URL) {
+    if (process.env.NODE_ENV === 'production' && (process.env.POSTGRES_URL || process.env.DATABASE_URL)) {
         // استخدام PostgreSQL في الإنتاج (Vercel)
         console.log('استخدام PostgreSQL للإنتاج');
+        const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
         return new Pool({
-            connectionString: process.env.POSTGRES_URL,
-            ssl: {
+            connectionString: connectionString,
+            ssl: process.env.NODE_ENV === 'production' ? {
                 rejectUnauthorized: false
-            }
+            } : false,
+            max: 20,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 2000,
         });
     } else {
         // استخدام SQLite في التطوير المحلي
@@ -27,7 +31,7 @@ function createDatabase() {
 
 // دالة تنفيذ الاستعلامات للـ PostgreSQL
 async function runQuery(db, query, params = []) {
-    if (process.env.NODE_ENV === 'production' && process.env.POSTGRES_URL) {
+    if (process.env.NODE_ENV === 'production' && (process.env.POSTGRES_URL || process.env.DATABASE_URL)) {
         try {
             const result = await db.query(query, params);
             return result.rows;
@@ -51,7 +55,7 @@ async function runQuery(db, query, params = []) {
 
 // دالة تنفيذ استعلام واحد للـ PostgreSQL
 async function runSingleQuery(db, query, params = []) {
-    if (process.env.NODE_ENV === 'production' && process.env.POSTGRES_URL) {
+    if (process.env.NODE_ENV === 'production' && (process.env.POSTGRES_URL || process.env.DATABASE_URL)) {
         try {
             const result = await db.query(query, params);
             return result.rows[0];
@@ -75,10 +79,10 @@ async function runSingleQuery(db, query, params = []) {
 
 // دالة تنفيذ استعلام بدون إرجاع بيانات
 async function runExecQuery(db, query, params = []) {
-    if (process.env.NODE_ENV === 'production' && process.env.POSTGRES_URL) {
+    if (process.env.NODE_ENV === 'production' && (process.env.POSTGRES_URL || process.env.DATABASE_URL)) {
         try {
-            await db.query(query, params);
-            return true;
+            const result = await db.query(query, params);
+            return { lastID: result.insertId, changes: result.rowCount };
         } catch (error) {
             console.error('خطأ في تنفيذ الاستعلام:', error);
             throw error;

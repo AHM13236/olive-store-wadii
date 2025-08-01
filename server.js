@@ -1348,20 +1348,25 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// بدء الخادم
-app.listen(PORT, () => {
-    console.log(`الخادم يعمل على المنفذ ${PORT}`);
-    console.log(`يمكنك زيارة الموقع على: http://localhost:${PORT}`);
-    console.log(`لوحة الإدارة متاحة على: http://localhost:${PORT}/admin`);
-});
-
-// إغلاق قاعدة البيانات عند إيقاف الخادم
-process.on('SIGINT', () => {
-    db.close((err) => {
-        if (err) {
-            console.error(err.message);
-        }
-        console.log('تم إغلاق قاعدة البيانات');
-        process.exit(0);
+// بدء الخادم (للتطوير المحلي فقط)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`الخادم يعمل على المنفذ ${PORT}`);
+        console.log(`يمكنك زيارة الموقع على: http://localhost:${PORT}`);
+        console.log(`لوحة الإدارة متاحة على: http://localhost:${PORT}/admin`);
     });
-});
+
+    // إغلاق قاعدة البيانات عند إيقاف الخادم
+    process.on('SIGINT', () => {
+        db.close((err) => {
+            if (err) {
+                console.error(err.message);
+            }
+            console.log('تم إغلاق قاعدة البيانات');
+            process.exit(0);
+        });
+    });
+}
+
+// تصدير التطبيق للنشر على Vercel
+module.exports = app;
