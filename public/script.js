@@ -1,4 +1,4 @@
-// متغيرات عامة
+// ===== المتغيرات العامة =====
 let currentUser = null;
 let cart = [];
 let products = [];
@@ -7,7 +7,7 @@ let isAuthMode = 'login'; // 'login' أو 'register'
 // API Base URL
 const API_BASE = window.location.origin;
 
-// تحميل البيانات عند تحميل الصفحة
+// ===== تهيئة التطبيق =====
 document.addEventListener('DOMContentLoaded', function() {
     loadProducts();
     loadCart();
@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupNavigation();
 });
 
+// ===== إدارة التنقل =====
 // إعداد التنقل
 function setupNavigation() {
     // إظهار الصفحة الرئيسية افتراضياً
@@ -108,6 +109,7 @@ function showPage(pageId) {
     closeCart();
 }
 
+// ===== إدارة السلة =====
 // فتح/إغلاق السلة
 function toggleCart() {
     const cartSidebar = document.getElementById('cart-sidebar');
@@ -124,6 +126,7 @@ function closeCart() {
     }
 }
 
+// ===== إدارة المصادقة =====
 // إظهار نافذة التسجيل
 function showAuthModal() {
     const authModal = document.getElementById('auth-modal');
@@ -158,7 +161,7 @@ function switchAuthMode() {
     }
 }
 
-// إعداد مستمعي الأحداث
+// ===== إعداد مستمعي الأحداث =====
 function setupEventListeners() {
     // إعداد التنقل
     setupNavigation();
@@ -211,6 +214,7 @@ function setupEventListeners() {
     }
 }
 
+// ===== إدارة المنتجات =====
 // تحميل المنتجات
 async function loadProducts() {
     try {
@@ -703,6 +707,7 @@ async function handleRegister(e) {
     }
 }
 
+// ===== إدارة الطلبات =====
 // إرسال الطلب عبر الواتساب
 function sendOrderViaWhatsApp() {
     if (cart.length === 0) {
@@ -1505,7 +1510,7 @@ function sendOrderToWhatsApp(orderId) {
     showAlert('تم فتح واتساب لإرسال الطلب', 'success');
 }
 
-// ===== وظائف التقييمات =====
+// ===== إدارة المراجعات =====
 
 // عرض نافذة التقييم بعد إتمام الطلب
 function showRatingModal(orderData) {
@@ -1675,6 +1680,7 @@ function displayReviews(reviews) {
     reviewsContainer.innerHTML = reviewsHTML;
 }
 
+// ===== الوظائف المساعدة =====
 // إنشاء HTML للنجوم
 function generateStarsHTML(rating) {
     let starsHTML = '';

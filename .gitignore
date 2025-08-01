@@ -79,3 +79,4 @@ build/
 *.rar
 *.7z
 *.tar.gz
+.vercel

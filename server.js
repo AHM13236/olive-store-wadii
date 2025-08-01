@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const nodemailer = require('nodemailer');
+const { createDatabase, runQuery, runSingleQuery, runExecQuery, initializePostgresDatabase } = require('./database');
 require('dotenv').config();
 
 const app = express();
@@ -122,164 +123,189 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // إنشاء قاعدة البيانات
-const db = new sqlite3.Database('./olive_store.db', (err) => {
-    if (err) {
-        console.error('خطأ في الاتصال بقاعدة البيانات:', err.message);
-    } else {
-        console.log('تم الاتصال بقاعدة البيانات بنجاح');
-        initializeDatabase();
-    }
-});
+const db = createDatabase();
 
-// إنشاء الجداول
-function initializeDatabase() {
-    // جدول المستخدمين
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        full_name TEXT NOT NULL,
-        phone TEXT,
-        address TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`, (err) => {
-        if (err) console.error('خطأ في إنشاء جدول المستخدمين:', err);
-        else console.log('تم إنشاء جدول المستخدمين');
-    });
-
-    // جدول المنتجات
-    db.run(`CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT,
-        price REAL NOT NULL,
-        image_url TEXT,
-        category TEXT,
-        stock_quantity INTEGER DEFAULT 0,
-        origin TEXT,
-        quality_grade TEXT,
-        weight_kg REAL DEFAULT 10.0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`, (err) => {
-        if (err) console.error('خطأ في إنشاء جدول المنتجات:', err);
-        else {
-            console.log('تم إنشاء جدول المنتجات');
-            // إضافة عمود الوزن إذا لم يكن موجوداً
-            db.run(`ALTER TABLE products ADD COLUMN weight_kg REAL DEFAULT 10.0`, (err) => {
-                if (err && !err.message.includes('duplicate column name')) {
-                    console.error('خطأ في إضافة عمود الوزن:', err);
-                } else {
-                    console.log('تم إضافة عمود الوزن');
-                }
-            });
-        }
-    });
-
-    // جدول سلة التسوق
-    db.run(`CREATE TABLE IF NOT EXISTS cart (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        product_id INTEGER,
-        quantity INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (product_id) REFERENCES products (id)
-    )`, (err) => {
-        if (err) console.error('خطأ في إنشاء جدول السلة:', err);
-        else console.log('تم إنشاء جدول السلة');
-    });
-
-    // جدول الطلبات
-    db.run(`CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        total_amount REAL NOT NULL,
-        status TEXT DEFAULT 'pending',
-        payment_method TEXT,
-        shipping_address TEXT,
-        customer_name TEXT,
-        customer_phone TEXT,
-        customer_email TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    )`, (err) => {
-        if (err) console.error('خطأ في إنشاء جدول الطلبات:', err);
-        else {
-            console.log('تم إنشاء جدول الطلبات');
-            // إضافة الأعمدة الجديدة إذا لم تكن موجودة
-            db.run(`ALTER TABLE orders ADD COLUMN customer_name TEXT`, (err) => {
-                if (err && !err.message.includes('duplicate column name')) {
-                    console.error('خطأ في إضافة عمود customer_name:', err);
-                }
-            });
-            db.run(`ALTER TABLE orders ADD COLUMN customer_phone TEXT`, (err) => {
-                if (err && !err.message.includes('duplicate column name')) {
-                    console.error('خطأ في إضافة عمود customer_phone:', err);
-                }
-            });
-            db.run(`ALTER TABLE orders ADD COLUMN customer_email TEXT`, (err) => {
-                if (err && !err.message.includes('duplicate column name')) {
-                    console.error('خطأ في إضافة عمود customer_email:', err);
-                }
-            });
-        }
-    });
-
-    // جدول تفاصيل الطلبات
-    db.run(`CREATE TABLE IF NOT EXISTS order_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER,
-        product_id INTEGER,
-        quantity INTEGER,
-        price REAL,
-        product_name TEXT,
-        FOREIGN KEY (order_id) REFERENCES orders (id),
-        FOREIGN KEY (product_id) REFERENCES products (id)
-    )`, (err) => {
-        if (err) console.error('خطأ في إنشاء جدول تفاصيل الطلبات:', err);
-        else {
-            console.log('تم إنشاء جدول تفاصيل الطلبات');
-            // إضافة عمود اسم المنتج إذا لم يكن موجوداً
-            db.run(`ALTER TABLE order_items ADD COLUMN product_name TEXT`, (err) => {
-                if (err && !err.message.includes('duplicate column name')) {
-                    console.error('خطأ في إضافة عمود product_name:', err);
-                }
-            });
-        }
-    });
-
-    // جدول المراجعات والتقييمات
-    db.run(`CREATE TABLE IF NOT EXISTS reviews (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_name TEXT NOT NULL,
-        customer_email TEXT,
-        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-        comment TEXT,
-        order_id INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        is_approved BOOLEAN DEFAULT 0,
-        FOREIGN KEY (order_id) REFERENCES orders (id)
-    )`, (err) => {
-        if (err) console.error('خطأ في إنشاء جدول المراجعات:', err);
-        else console.log('تم إنشاء جدول المراجعات');
-    });
-
-    // التحقق من وجود المنتجات وإضافتها إذا لم تكن موجودة
-    db.get('SELECT COUNT(*) as count FROM products', (err, result) => {
-        if (err) {
-            console.error('خطأ في التحقق من المنتجات:', err);
-        } else if (result.count === 0) {
-            console.log('لا توجد منتجات، سيتم إضافة المنتجات الافتراضية...');
-            insertNewProducts();
+// تهيئة قاعدة البيانات
+async function initializeDatabase() {
+    try {
+        if (process.env.NODE_ENV === 'production' && process.env.POSTGRES_URL) {
+            console.log('تهيئة قاعدة بيانات PostgreSQL...');
+            await initializePostgresDatabase(db);
         } else {
-            console.log(`يوجد ${result.count} منتج في قاعدة البيانات`);
+            console.log('تهيئة قاعدة بيانات SQLite...');
+            await initializeSQLiteDatabase();
         }
+        
+        // التحقق من وجود المنتجات
+        await checkAndInsertProducts();
+        
+    } catch (error) {
+        console.error('خطأ في تهيئة قاعدة البيانات:', error);
+    }
+}
+
+// تهيئة قاعدة البيانات
+initializeDatabase();
+
+// تهيئة قاعدة بيانات SQLite
+async function initializeSQLiteDatabase() {
+    return new Promise((resolve, reject) => {
+        // جدول المستخدمين
+        db.run(`CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            phone TEXT,
+            address TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
+            if (err) console.error('خطأ في إنشاء جدول المستخدمين:', err);
+            else console.log('تم إنشاء جدول المستخدمين');
+        });
+
+        // جدول المنتجات
+        db.run(`CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            price REAL NOT NULL,
+            image_url TEXT,
+            category TEXT,
+            stock_quantity INTEGER DEFAULT 0,
+            origin TEXT,
+            quality_grade TEXT,
+            weight_kg REAL DEFAULT 10.0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
+            if (err) console.error('خطأ في إنشاء جدول المنتجات:', err);
+            else {
+                console.log('تم إنشاء جدول المنتجات');
+                // إضافة عمود الوزن إذا لم يكن موجوداً
+                db.run(`ALTER TABLE products ADD COLUMN weight_kg REAL DEFAULT 10.0`, (err) => {
+                    if (err && !err.message.includes('duplicate column name')) {
+                        console.error('خطأ في إضافة عمود الوزن:', err);
+                    } else {
+                        console.log('تم إضافة عمود الوزن');
+                    }
+                });
+            }
+        });
+
+        // جدول سلة التسوق
+        db.run(`CREATE TABLE IF NOT EXISTS cart (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            product_id INTEGER,
+            quantity INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (product_id) REFERENCES products (id)
+        )`, (err) => {
+            if (err) console.error('خطأ في إنشاء جدول السلة:', err);
+            else console.log('تم إنشاء جدول السلة');
+        });
+
+        // جدول الطلبات
+        db.run(`CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            total_amount REAL NOT NULL,
+            status TEXT DEFAULT 'pending',
+            payment_method TEXT,
+            shipping_address TEXT,
+            customer_name TEXT,
+            customer_phone TEXT,
+            customer_email TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )`, (err) => {
+            if (err) console.error('خطأ في إنشاء جدول الطلبات:', err);
+            else {
+                console.log('تم إنشاء جدول الطلبات');
+                // إضافة الأعمدة الجديدة إذا لم تكن موجودة
+                db.run(`ALTER TABLE orders ADD COLUMN customer_name TEXT`, (err) => {
+                    if (err && !err.message.includes('duplicate column name')) {
+                        console.error('خطأ في إضافة عمود customer_name:', err);
+                    }
+                });
+                db.run(`ALTER TABLE orders ADD COLUMN customer_phone TEXT`, (err) => {
+                    if (err && !err.message.includes('duplicate column name')) {
+                        console.error('خطأ في إضافة عمود customer_phone:', err);
+                    }
+                });
+                db.run(`ALTER TABLE orders ADD COLUMN customer_email TEXT`, (err) => {
+                    if (err && !err.message.includes('duplicate column name')) {
+                        console.error('خطأ في إضافة عمود customer_email:', err);
+                    }
+                });
+            }
+        });
+
+        // جدول تفاصيل الطلبات
+        db.run(`CREATE TABLE IF NOT EXISTS order_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER,
+            product_id INTEGER,
+            quantity INTEGER,
+            price REAL,
+            product_name TEXT,
+            FOREIGN KEY (order_id) REFERENCES orders (id),
+            FOREIGN KEY (product_id) REFERENCES products (id)
+        )`, (err) => {
+            if (err) console.error('خطأ في إنشاء جدول تفاصيل الطلبات:', err);
+            else {
+                console.log('تم إنشاء جدول تفاصيل الطلبات');
+                // إضافة عمود اسم المنتج إذا لم يكن موجوداً
+                db.run(`ALTER TABLE order_items ADD COLUMN product_name TEXT`, (err) => {
+                    if (err && !err.message.includes('duplicate column name')) {
+                        console.error('خطأ في إضافة عمود product_name:', err);
+                    }
+                });
+            }
+        });
+
+        // جدول المراجعات والتقييمات
+        db.run(`CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_name TEXT NOT NULL,
+            customer_email TEXT,
+            rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+            comment TEXT,
+            order_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_approved BOOLEAN DEFAULT 0,
+            FOREIGN KEY (order_id) REFERENCES orders (id)
+        )`, (err) => {
+            if (err) console.error('خطأ في إنشاء جدول المراجعات:', err);
+            else {
+                console.log('تم إنشاء جدول المراجعات');
+                resolve();
+            }
+        });
     });
 }
 
+// التحقق من وجود المنتجات وإضافتها
+async function checkAndInsertProducts() {
+    try {
+        const result = await runSingleQuery(db, 'SELECT COUNT(*) as count FROM products');
+        const count = result ? (result.count || 0) : 0;
+        
+        if (count === 0) {
+            console.log('لا توجد منتجات، سيتم إضافة المنتجات الافتراضية...');
+            await insertNewProducts();
+        } else {
+            console.log(`يوجد ${count} منتج في قاعدة البيانات`);
+        }
+    } catch (error) {
+        console.error('خطأ في التحقق من المنتجات:', error);
+    }
+}
+
 // إدراج المنتجات الجديدة
-function insertNewProducts() {
+async function insertNewProducts() {
     console.log('إضافة المنتجات الجديدة...');
     
     const newProducts = [
@@ -549,18 +575,18 @@ function insertNewProducts() {
         }
     ];
 
-    newProducts.forEach(product => {
-        db.run(`INSERT INTO products (name, description, price, image_url, category, stock_quantity, origin, quality_grade, weight_kg) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [product.name, product.description, product.price, product.image_url, product.category, product.stock_quantity, product.origin, product.quality_grade, product.weight_kg],
-            function(err) {
-                if (err) {
-                    console.error('خطأ في إضافة المنتج:', product.name, err);
-                } else {
-                    console.log('تم إضافة المنتج:', product.name);
-                }
-            });
-    });
+    for (const product of newProducts) {
+        try {
+            await runQuery(db, 
+                `INSERT INTO products (name, description, price, image_url, category, stock_quantity, origin, quality_grade, weight_kg) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [product.name, product.description, product.price, product.image_url, product.category, product.stock_quantity, product.origin, product.quality_grade, product.weight_kg]
+            );
+            console.log('تم إضافة المنتج:', product.name);
+        } catch (error) {
+            console.error('خطأ في إضافة المنتج:', product.name, error);
+        }
+    }
 }
 
 // دالة إضافة المنتجات سيتم استدعاؤها من initializeDatabase() إذا لم تكن المنتجات موجودة
@@ -592,28 +618,25 @@ app.post('/api/register', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        db.run(`INSERT INTO users (username, email, password, full_name, phone, address) 
-                VALUES (?, ?, ?, ?, ?, ?)`,
-            [username, email, hashedPassword, full_name, phone, address],
-            function(err) {
-                if (err) {
-                    return res.status(400).json({ error: 'خطأ في إنشاء الحساب' });
-                }
-                res.json({ message: 'تم إنشاء الحساب بنجاح', userId: this.lastID });
-            });
+        const result = await runQuery(db, 
+            `INSERT INTO users (username, email, password, full_name, phone, address) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [username, email, hashedPassword, full_name, phone, address]
+        );
+        
+        res.json({ message: 'تم إنشاء الحساب بنجاح', userId: result.lastID });
     } catch (error) {
-        res.status(500).json({ error: 'خطأ في الخادم' });
+        console.error('خطأ في تسجيل المستخدم:', error);
+        res.status(400).json({ error: 'خطأ في إنشاء الحساب' });
     }
 });
 
 // تسجيل الدخول
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
-    db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-        if (err) {
-            return res.status(500).json({ error: 'خطأ في الخادم' });
-        }
+    try {
+        const user = await runSingleQuery(db, 'SELECT * FROM users WHERE email = ?', [email]);
 
         if (!user) {
             return res.status(401).json({ error: 'بيانات دخول غير صحيحة' });
@@ -626,32 +649,37 @@ app.post('/api/login', (req, res) => {
 
         const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET);
         res.json({ token, user: { id: user.id, username: user.username, email: user.email, full_name: user.full_name } });
-    });
+    } catch (error) {
+        console.error('خطأ في تسجيل الدخول:', error);
+        res.status(500).json({ error: 'خطأ في الخادم' });
+    }
 });
 
 // الحصول على جميع المنتجات
-app.get('/api/products', (req, res) => {
-    db.all('SELECT * FROM products ORDER BY created_at DESC', (err, products) => {
-        if (err) {
-            return res.status(500).json({ error: 'خطأ في جلب المنتجات' });
-        }
+app.get('/api/products', async (req, res) => {
+    try {
+        const products = await runExecQuery(db, 'SELECT * FROM products ORDER BY created_at DESC');
         res.json(products);
-    });
+    } catch (error) {
+        console.error('خطأ في جلب المنتجات:', error);
+        res.status(500).json({ error: 'خطأ في جلب المنتجات' });
+    }
 });
 
 // الحصول على منتج واحد
-app.get('/api/products/:id', (req, res) => {
+app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
     
-    db.get('SELECT * FROM products WHERE id = ?', [id], (err, product) => {
-        if (err) {
-            return res.status(500).json({ error: 'خطأ في جلب المنتج' });
-        }
+    try {
+        const product = await runSingleQuery(db, 'SELECT * FROM products WHERE id = ?', [id]);
         if (!product) {
             return res.status(404).json({ error: 'المنتج غير موجود' });
         }
         res.json(product);
-    });
+    } catch (error) {
+        console.error('خطأ في جلب المنتج:', error);
+        res.status(500).json({ error: 'خطأ في جلب المنتج' });
+    }
 });
 
 // إضافة منتج إلى السلة
@@ -666,7 +694,7 @@ app.post('/api/cart/add', authenticateToken, (req, res) => {
         }
 
         if (existingItem) {
-            // تحديث الكمية
+            // تحدية الكمية
             db.run('UPDATE cart SET quantity = quantity + ? WHERE user_id = ? AND product_id = ?',
                 [quantity, user_id, product_id], (err) => {
                     if (err) {
@@ -713,7 +741,7 @@ app.put('/api/cart/:id', authenticateToken, (req, res) => {
             if (err) {
                 return res.status(500).json({ error: 'خطأ في تحديث السلة' });
             }
-            res.json({ message: 'تم تحديث الكمية بنجاح' });
+            res.json({ message: 'تم تحدية الكمية بنجاح' });
         });
 });
 
@@ -1316,6 +1344,7 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`الخادم يعمل على المنفذ ${PORT}`);
     console.log(`يمكنك زيارة الموقع على: http://localhost:${PORT}`);
+    console.log(`لوحة الإدارة متاحة على: http://localhost:${PORT}/admin`);
 });
 
 // إغلاق قاعدة البيانات عند إيقاف الخادم

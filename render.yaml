@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: olive-store-wadii
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: olive_store_secret_key_2024_secure
+      - key: EMAIL_USER
+        value: your-email@gmail.com
+      - key: EMAIL_PASS
+        value: beol_dpcw_xnfq_rxzr_2024
+      - key: RECIPIENT_EMAIL
+        value: elagamy@internet.ru
+      - key: DATABASE_URL
+        value: ./olive_store.db
+      - key: CORS_ORIGIN
+        value: "*"
