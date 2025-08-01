@@ -70,3 +70,46 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Vercel
+.vercel
+
+# Build outputs
+dist/
+build/
+out/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Package manager lock files (keep only one)
+# yarn.lock
+# pnpm-lock.yaml
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Archive files (optional - uncomment if you don't want to track zip files)
+# *.zip
+# *.rar
+# *.tar.gz
+
+# Local configuration files
+config.local.js
+config.local.json
+
+# Test files
+test-results/
+coverage/
+
+# Documentation build
+docs/build/
