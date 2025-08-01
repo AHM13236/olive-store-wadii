@@ -591,14 +591,14 @@
         async function loadOrders() {
             try {
                 // تحميل الإحصائيات
-                const statsResponse = await fetch('/api/admin/stats');
+                const statsResponse = await fetch(`${window.location.origin}/api/admin/stats`);
                 if (statsResponse.ok) {
                     const stats = await statsResponse.json();
                     updateStatsDisplay(stats);
                 }
 
                 // تحميل الطلبات
-                const ordersResponse = await fetch('/api/admin/orders');
+                const ordersResponse = await fetch(`${window.location.origin}/api/admin/orders`);
                 if (ordersResponse.ok) {
                     allOrders = await ordersResponse.json();
                     displayOrders(allOrders);
@@ -619,7 +619,7 @@
         // تحميل المراجعات من الخادم
         async function loadReviews() {
             try {
-                const response = await fetch('/api/admin/reviews');
+                const response = await fetch(`${window.location.origin}/api/admin/reviews`);
                 if (response.ok) {
                     allReviews = await response.json();
                     displayReviews(allReviews);
@@ -803,7 +803,7 @@
         // الموافقة على المراجعة
         async function approveReview(reviewId) {
             try {
-                const response = await fetch(`/api/admin/reviews/${reviewId}/approve`, {
+                const response = await fetch(`${window.location.origin}/api/admin/reviews/${reviewId}/approve`, {
                     method: 'PUT'
                 });
 
@@ -832,7 +832,7 @@
             }
 
             try {
-                const response = await fetch(`/api/admin/reviews/${reviewId}`, {
+                const response = await fetch(`${window.location.origin}/api/admin/reviews/${reviewId}`, {
                     method: 'DELETE'
                 });
 
@@ -963,7 +963,7 @@
         // تحديث حالة الطلب
         async function updateOrderStatus(orderId, newStatus) {
             try {
-                const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+                const response = await fetch(`${window.location.origin}/api/admin/orders/${orderId}/status`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -979,7 +979,7 @@
                         filterOrders();
                         
                         // إعادة تحميل الإحصائيات
-                        const statsResponse = await fetch('/api/admin/stats');
+                        const statsResponse = await fetch(`${window.location.origin}/api/admin/stats`);
                         if (statsResponse.ok) {
                             const stats = await statsResponse.json();
                             updateStatsDisplay(stats);
@@ -1003,7 +1003,7 @@
             }
 
             try {
-                const response = await fetch(`/api/admin/orders/${orderId}`, {
+                const response = await fetch(`${window.location.origin}/api/admin/orders/${orderId}`, {
                     method: 'DELETE'
                 });
 
@@ -1013,7 +1013,7 @@
                     filterOrders();
                     
                     // إعادة تحميل الإحصائيات
-                    const statsResponse = await fetch('/api/admin/stats');
+                    const statsResponse = await fetch(`${window.location.origin}/api/admin/stats`);
                     if (statsResponse.ok) {
                         const stats = await statsResponse.json();
                         updateStatsDisplay(stats);
